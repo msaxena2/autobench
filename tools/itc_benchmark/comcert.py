@@ -31,42 +31,63 @@ class Compcert(Tool):
                 bootstrap_file_path]
 
     def run(self, verbose=False, log_location=None):
-        relevant_dirs = ["02.w_Defects", "02.wo_Defects"]
+        relevant_dirs = ["01.w_Defects", "02.wo_Defects"]
         output_dict = {}
         log_file = None
-        if log_location is not None:
+        if log_location != None:
             log_file = open(log_location, 'w+')
-
         for cur_dir in relevant_dirs:
             spec_dict = self.info.get_spec_dict()
             mapping_dict = self.info.get_file_mapping()
-            for i in range(1, 3):  # len(spec_dict.keys()) + 1):
+            for i in range(1, len(spec_dict.keys()) + 1):
                 if i not in output_dict:
                     output_dict[i] = {"count": spec_dict[i]["count"], "TP": 0, "FP": 0}
                 file_prefix = mapping_dict[i]
-                print self.name + " being tested on folder " + cur_dir + " and file " + file_prefix + ".c"
+                location_message = self.name + " being tested on folder " + cur_dir + " and file " + file_prefix + ".c"
+                print location_message
                 # bar = progressbar.ProgressBar(redirect_stdout=True)
                 for j in range(1, spec_dict[i]["count"]):
                     vflag = str('%03d' % j)
                     try:
-                        compcert_command = self.get_compcert_command(self.benchmark_path, cur_dir,
-                                                                     file_prefix, vflag)
-                        if len(compcert_command) != 0:
-                            signal.signal(signal.SIGALRM, self.signal_handler)
-                            signal.alarm(10)
-                            subprocess.check_output(compcert_command, stderr=subprocess.STDOUT)
+                        compcert_command = self.get_compcert_command(cur_dir, file_prefix, "bootstrap_dir", vflag)
+                        if len(compcert_command) == 0:
+                            continue
+                        print " ".join(compcert_command)
+                        signal.signal(signal.SIGALRM, self.signal_handler)
+                        signal.alarm(10)
+                        output = subprocess.check_output(compcert_command, stderr=subprocess.STDOUT)
+                        if log_file != None:
+                            log_file.write(location_message)
+                            log_file.write(output)
+                            log_file.write("confirmed as Negative \n")
+
                     except subprocess.CalledProcessError as e:
+                        signal.alarm(0)
+                        print e.output
+                        dec = raw_input("Is this error Valid? ")
+                        if dec == "y":
+                            if "w_Defects" in cur_dir:
+                                output_dict[i]["TP"] += 1
+                                if log_file != None:
+                                    log_file.write(location_message)
+                                    log_file.write(e.output)
+                                    log_file.write("Confirmed as TP \n")
 
-                        if "w_Defects" in cur_dir:
-                            output_dict[i]["TP"] += 1
-                        else:
-                            output_dict[i]["FP"] += 1
-
+                            else:
+                                output_dict[i]["FP"] += 1
+                                if log_file != None:
+                                    log_file.write(location_message)
+                                    log_file.write("Confirmed as FP \n")
 
                     except TimeoutException:
                         continue
                     finally:
                         signal.alarm(0)
+                        if log_file != None:
+                                log_file.write(location_message)
+                                log_file.write("Confirmed as Timed Out \n")
+
+
         return output_dict
 
     def get_name(self):
