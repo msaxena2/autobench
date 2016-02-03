@@ -34,7 +34,6 @@ class Valgrind(Tool):
                 file_prefix = mapping_dict[i]
                 print self.name + " being tested on file " + str(i)
                 executable_name = cur_dir.split('.')[0] + "_" + cur_dir.split('.')[-1]
-                #bar = progressbar.ProgressBar()
                 for j in range(1, spec_dict[i]["count"]):
                     if (i, j) in ignore_list:
                         continue
@@ -46,11 +45,11 @@ class Valgrind(Tool):
                     try:
                         #output = subprocess.check_output(kcc_command, stderr=subprocess.STDOUT, timeout=4)
                         process = subprocess.Popen(valgrind_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        exit_code = process.wait(timeout=16)
+                        exit_code = process.wait(timeout=8)
                         output = process.stdout.read() + process.stderr.read()
+                        print output
                         if exit_code != 0:
                             result="POS"
-
 
                     except subprocess.TimeoutExpired as e:
                         result = "TO"
@@ -87,7 +86,7 @@ class Valgrind(Tool):
 
         self.info = Info()
         self.benchmark_path = benchmark_path
-        self.name = "Valgrind+GCC"
+        self.name = "Valgrind"
         self.logger = Logger(log_file_path, self.name)
 
     def analyze(self):

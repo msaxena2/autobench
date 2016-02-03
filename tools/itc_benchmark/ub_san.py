@@ -18,7 +18,7 @@ class UBSan(Tool):
 
 
     def check_output(self, output):
-        if "ThreadSanitizer: reported" in output:
+        if "error" in output:
             return True
         return False
 
